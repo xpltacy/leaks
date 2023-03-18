@@ -1,0 +1,842 @@
+--< Paup's Universal Reach [Monkeyware / Heaven]
+
+local Method = {
+    --< CBRING > --
+    ["CBring"] = true, -- Lunge Only
+    ["CBring.Distance"] = 12,
+    ["CBring.Method"] = "Character",
+    ["Hook"] = true,
+    ["RobloxScripts"] = true,
+    ["InsideSword"] = false,
+    -- < CBring FTI > --
+    ["CBring FTI"] = false, -- Basically just cbring but it has FTI to boost your damage (UNSTABLE)
+    ["CBring FTI.AMP"] = 2,
+    
+    --< CBRING Visualizer >--
+    
+    ["CBring.Visualizer"] = false, -- Toggle Visualizer(Rays)
+    ["Rainbow.Visualizer"] = true,
+    ["CBring.Visualizer_Segments"] = 10,
+    ["CBring_RemovalTimer"] = 0.25,
+    ["VisualizerRay.Debounce"] = 0.05,
+    
+    --< > -- < Handle TP > -- < > --
+    
+    ["SwordTp"] = false, -- Toggle
+    ["SwordTp.Distance"] = 11,
+    ["SwordTp.Trail"] = true,
+    ["SwordTp.TrailLifeTime"] = 0.3,
+    ["HookTool"] = true,
+    
+    -- < Hitbox Expander(HBE) > --
+    ["HBE"] = false, -- (UNPROTECTED / TOGGLE)
+    ["HBE.Size"] = Vector3.new(7,7,7),
+    
+    --< RESIZE > --
+    ["Resize"] = false, -- (UNFINISHED / TOGGLE)
+    ["Resize.Distance"] = 5,
+}
+
+local KeyInputs = {
+    ["Reach.Down"] = Enum.KeyCode.J,
+    ["Reach.Up"] = Enum.KeyCode.K,
+}
+
+local DeveloperTable = {
+    ["Debug.Mode"] = false,
+}
+
+local function ChangeFunc(v, hook)
+    if hook == true then
+    for i, v in next, getconnections(v) do
+       v:Disable()
+       v.Function = print
+    end
+   else
+       for i, v in next, getconnections(v) do
+           v:Disable()
+           v.Function = print or error or warn
+        end
+    end
+end
+
+
+local function EnableFunc(v)
+    for i, v in next, getconnections(v) do
+       v:Enable()
+    end
+end
+
+
+local function DisableFunc(v)
+    for i, v in next, getconnections(v) do
+       v:Disable()
+    end
+end
+
+local HookHBEIndex = function(obj, keya, retur)
+        --warn("[EVENT] HOOKHBEINDEX [OBJ = nil]")
+        local a; a = hookmetamethod(game, "__index", function(self,key)
+            if not checkcaller() then
+                if self == obj and tostring(key):find(keya) then
+                    return retur
+                    end
+                end
+            return a(self,key)
+        end)
+    end
+
+local function SendEvent(title, text, duration, icon)
+    --[[
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = title;
+    Text = text;
+    Duration = duration;
+    Icon = icon
+    })
+    
+    --]]
+end
+
+-- < CBRING VISUALIZER > --
+local function ReturnRandomColor()
+   return BrickColor.Random()
+end
+
+local function Draw(p1,p2,p, clr)
+    local Dist = (p2.Position - p1.Position).Magnitude
+    local Part = Instance.new("Part", p)
+    Part.CanCollide = false
+    Part.Anchored = true
+    Part.Position = p1.Position
+    Part.Material = Enum.Material.Neon or "Neon"
+    
+if Method["Rainbow.Visualizer"] == true then
+    Part.BrickColor = clr
+else
+    Part.BrickColor = BrickColor.new("Medium blue")
+end
+
+    Part.Size = Vector3.new(0.2, 0.2, Dist)
+    Part.CFrame = CFrame.new(p1.Position, p2.Position) * CFrame.new(0,0,-Dist/2)
+end
+
+local function VisualizeTransparency(v)
+    game:GetService("TweenService"):Create(v, TweenInfo.new(Method["CBring_RemovalTimer"], Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false), {Transparency = 1}):Play()
+end
+
+    
+local function CreateLightning(Start, End, Points)
+    local CLR = nil
+    if Method["Rainbow.Visualizer"] == true then
+        CLR = ReturnRandomColor()
+    end
+        
+    local Model = Instance.new("Model", workspace)
+    local PointsT = {}
+    for i = 0, Points do
+        
+        if i == 0 or i == Points then
+            Offset = Vector3.new(0,0,0)
+        end
+        local Offset = Vector3.new(math.random(-2, 3.5), math.random(-2,2), math.random(-2, 3.5))
+        local Part = Instance.new("Part", workspace)
+        Part.Anchored = true
+        Part.CanCollide = false
+        Part.Size = Vector3.new(0.2, 0.2, 0.2)
+        Part.Material = Enum.Material.Neon or "Neon"
+    if Method["Rainbow.Visualizer"] == true then
+        if CLR ~= nil then
+        Part.BrickColor = CLR
+    else
+        Part.BrickColor = BrickColor.new("Medium blue")
+        end
+    end
+        Part.Position = Start + (End - Start).Unit * i * (End - Start).Magnitude/Points + Offset
+        Part.Parent = Model
+        PointsT[#PointsT+1] = Part
+    end
+    
+    for i = 1,#PointsT do
+        if PointsT[i+1] ~= nil then
+            Draw(PointsT[i], PointsT[i+1], Model, CLR)
+        end
+    end
+    for index,pair in pairs(Model:GetChildren()) do if pair:IsA("Part") then VisualizeTransparency(pair) end end
+    game:GetService("Debris"):AddItem(Model, Method["CBring_RemovalTimer"])
+end
+
+-- < HANDLE TP VISUALIZER > --
+local HandleVis = function(h)
+    if h:FindFirstChild('nil') == nil or h:FindFirstChildOfClass("Trail") == nil then
+local A1 = Instance.new("Attachment", h)
+local A2 = Instance.new("Attachment", h)
+A1.WorldPosition = h.Position + Vector3.new(0, 2, 0)
+A2.WorldPosition = h.Position + Vector3.new(0, -2, 0)
+local trail = Instance.new("Trail", h)
+trail.Attachment0 = A1
+trail.Attachment1 = A2
+trail.FaceCamera = true
+trail.Color = ColorSequence.new(Color3.new(255/255, 0/255, 0/255), Color3.new(255/255, 0/255, 0/255))
+trail.TextureLength = 0.1
+trail.Lifetime = Method["SwordTp.TrailLifeTime"]
+trail.Name = "nil"
+end
+end
+-- < > --
+
+local player = game.Players.LocalPlayer
+local Handle = nil
+local Tool = nil
+
+local RobloxScripts = {"CameraModule", "PlayerModule", "Health", "Animate", "ChatScript", "PlayerModule", "PlayerScriptsLoader", "ChatScript", "BubbleChat", "RbsCharacterSounds"}
+local DisabledEnvs = {}
+local DisableEnvsChar = {}
+local RaysSent = {}
+
+-- < Create Lightning Function > --
+local function CLightning(v, pos, delay)
+if Method["CBring.Visualizer"] == true then
+    if not table.find(RaysSent, v.Name) then 
+            table.insert(RaysSent, v.Name)
+                CreateLightning(game:GetService("Players").LocalPlayer.Character["Right Arm"].Position, pos, Method["CBring.Visualizer_Segments"])
+                    task.wait(Method["VisualizerRay.Debounce"])
+                    table.remove(RaysSent, table.find(RaysSent, v.Name))
+                end
+        end
+end
+
+-- < FTI / CBRING FTI > --
+local tic = tick()
+local FTIA = function(handle, object, abstime)
+    print(object.Parent.Name .. " was FTI'd")
+    if math.abs(tick() - tic) < abstime then return end
+    tic = tick()
+    for i = 1, Method["CBring FTI.AMP"] do
+    firetouchinterest(object, handle, 0)
+    firetouchinterest(object, handle, 1)
+    firetouchinterest(object, handle, 0)
+    end
+end
+
+
+if Method["RobloxScripts"] == true then
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerScripts:GetDescendants()) do if v:IsA("LocalScript") or v:IsA("ModuleScript") then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService("Players").LocalPlayer.Character:GetChildren()) do if v.Name == "Animate" then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService('CoreGui'):GetDescendants()) do if v:IsA('LocalScript') or v:IsA('ModuleScript') then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService('Chat'):GetDescendants()) do if v:IsA('LocalScript') or v:IsA('ModuleScript') then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService('CoreGui'):GetDescendants()) do if v:IsA('LocalScript') or v:IsA('ModuleScript') then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService("Players").LocalPlayer.PlayerGui:GetDescendants()) do if v:IsA('LocalScript') or v:IsA('ModuleScript') then table.insert(RobloxScripts, v.Name) end end
+for i,v in pairs(game:GetService('CorePackages'):GetDescendants()) do if v:IsA('LocalScript') or v:IsA('ModuleScript') then table.insert(RobloxScripts, v.Name) end end
+
+repeat task.wait() until #RobloxScripts > 1
+end
+
+local UIS = game:GetService("UserInputService")
+
+if Method["CBring"] == true then
+    SendEvent("Monkeyware UNI", "Initializing CBRING", 2, "http://www.roblox.com/asset/?id=141687960")
+    if Method["Hook"] == true then
+        local Hook; Hook = hookmetamethod(game, "__namecall", function(...)
+        if not checkcaller() then
+            local args = {...}
+            local getname = getnamecallmethod()
+            if tostring(getname) == "IsA" and args[1] == "Part" or args[1] == "part" then
+                --warn('isa env')
+                return nil
+            elseif tostring(getname):find("IsA") and args[1] == "Part" or args[1] == "part" then
+                --warn("isa env 2")
+                return nil
+            elseif tostring(getname) == "IsA" and not table.find(RobloxScripts, getcallingscript().Name) then
+                --warn("isa env 3")
+                return nil
+                end
+            end
+        return Hook(...)
+    end)
+    
+    local HookGTPS; hookGTPS = hookmetamethod(game, "__namecall", function(...)
+        if not checkcaller() then
+            local args = {...}
+            local getname = getnamecallmethod()
+            if tostring(getname) == "GetPropertyChangedSignal" and args[1] == "CFrame" or args[1] == "CFrame\000" then
+                --warn('gtps env')
+                args[1] = "Name"
+                return
+            elseif tostring(getname) == "GetPropertyChangedSignal" and args[1] == "Position" or args[1] == "Position\000" then
+                --warn('gtps env 2')
+                args[1] = "Name"
+                return
+            --[[elseif tostring(getname):find("GetPropertyChangedSignal") and tostring(args)[1]:find("CFrame") then
+                warn("gtps env 3")
+                return--]]
+                end
+            end
+        return hookGTPS(...)
+    end)
+end
+    
+    spawn(function()
+        while task.wait() do
+            for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+                if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") then
+                    if player.Character and player.Character:FindFirstChildOfClass("Tool") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle") then
+                    if player.Character:FindFirstChildOfClass("Tool").GripUp.Z == 0 then
+                    local magnitude = (game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
+                    if magnitude <= Method["CBring.Distance"] then
+                        
+                        -- method
+                        if Method["CBring.Method"]:lower() == "character" then
+                        if Method["InsideSword"] == true then
+                            if not table.find(DisableEnvsChar, v) then
+                                table.insert(DisableEnvsChar, v)
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame\000"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position\000"))
+                            
+                            task.wait(1)
+                            table.clear(DisableEnvsChar)
+                        end
+                            CLightning(v, v.Character.HumanoidRootPart.Position)
+                            v.Character.HumanoidRootPart.Anchored = true
+                            v.Character.HumanoidRootPart.CanCollide = false
+                            v.Character.HumanoidRootPart.CFrame = game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle").CFrame * CFrame.new(0,2,2)
+                        if Method["CBring FTI"] == true then
+                            FTIA(player.Character:FindFirstChildOfClass("Tool").Handle, v.Character.HumanoidRootPart, 0.05)
+                        end
+                        else
+                            CLightning(v, v.Character.HumanoidRootPart.Position)
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame\000"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position"))
+                            DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position\000"))
+                            v.Character.HumanoidRootPart.CanCollide = false
+                            v.Character.HumanoidRootPart.CFrame = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame + v.Character.HumanoidRootPart.CFrame.LookVector * 3
+                        if Method["CBring FTI"] == true then
+                            FTIA(player.Character:FindFirstChildOfClass("Tool").Handle, v.Character.HumanoidRootPart, 0.05)
+                        end
+                            
+                        end
+                        end
+                    end
+                end
+            end
+        end
+    -- loop
+    for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+        if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 and v.Character.Humanoid:GetState() ~= Enum.HumanoidStateType.Dead and v.Character:FindFirstChild("HumanoidRootPart") then
+            if player.Character and player.Character:FindFirstChildOfClass("Tool") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle") then
+                if not table.find(DisabledEnvs, v) then
+                    table.insert(DisabledEnvs, v)
+                    
+                for i2, v2 in pairs(v.Character:GetChildren()) do
+                    if v2:IsA("Part") and v:FindFirstChildOfClass("TouchTransmitter") == nil then
+                        DisableFunc(v2:GetPropertyChangedSignal("CFrame"))
+                        DisableFunc(v2:GetPropertyChangedSignal("Position"))
+                        DisableFunc(v2:GetPropertyChangedSignal("CFrame\000"))
+                        DisableFunc(v2:GetPropertyChangedSignal("Position\000"))
+                        --warn("[EVENT] Disabled [P]")
+                      end
+                end
+               
+               if v.Character:FindFirstChild("HumanoidRootPart") and Method["CBring.Method"]:lower() == "character" then
+                   DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame"))
+                   DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("CFrame\000"))
+                   DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position"))
+                   DisableFunc(v.Character.HumanoidRootPart:GetPropertyChangedSignal("Position\000"))
+                   --warn("[EVENT] Disabled")
+               end
+              
+        
+               
+               
+               local Connection = nil
+               local Connection2 = nil
+               
+               --[[Connection2 = v.Character.Humanoid.HealthChanged:Connect(function()
+                   if table.find(DisabledEnvs, v) then
+                       table.remove(DisabledEnvs, table.find(DisabledEnvs, v))
+                       warn("[EVENT] Hum HP Changed (ReHook)")
+                   end
+               end)--]]
+               
+               Connection = v.Character.Humanoid.Died:Connect(function()
+                   warn("[EVENT] Hum Died")
+                   
+                   pcall(function()
+                   if table.find(DisabledEnvs, v) then
+                       table.remove(DisabledEnvs, table.find(DisabledEnvs, v))
+                       --for i,v in pairs(v.Character:GetChildren()) do if v:IsA("Part") then EnableFunc(v:GetPropertyChangedSignal("CFrame")) EnableFunc(v:GetPropertyChangedSignal("Position")) end end
+                       task.wait(4)
+                       Connection:Disconnect()
+                   end
+                   end)
+               end)
+                end
+           
+                end
+            end
+        end
+    end
+    --
+    end
+    end)
+    SendEvent("MonkeyWare V2", "Initialized CBRING", 2, "http://www.roblox.com/asset/?id=141687960")
+end
+
+if Method["SwordTp"] == true then
+    SendEvent("MonkeyWare V2", "Initializing Handle TP", 2, "http://www.roblox.com/asset/?id=141687960")
+    
+    if Method["HookTool"] == true then
+        local hook; hook = hookmetamethod(game, "__namecall", function(...)
+            if not checkcaller() then
+                local args = {...}
+                local getname = getnamecallmethod()
+                
+                if tostring(getname) == "IsA" and args[1] == "Tool" and not table.find(RobloxScripts, getcallingscript().Name) then
+                    warn("[EVENT] IsA Tool")
+                    return false
+                elseif tostring(getname):find("IsA") and args[1] == "Tool" and not table.find(RobloxScripts, getcallingscript().Name) then
+                    warn("[EVENT] IsA Tool 2")
+                    return false
+                    end
+                end
+            return hook(...)
+        end)
+        
+        local hookhp; hookhp = hookmetamethod(game, "__index", function(self,key)
+            if not checkcaller() then
+                if self:IsA("Humanoid") and tostring(self):find("Humanoid") then
+                    if tostring(key):find("Health") then
+                        warn("[EVENT] Health")
+                        return 0
+                        end
+                    end
+                end
+            return hookhp(self,key)
+        end)
+        
+        local hookmag; hookmag = hookmetamethod(game, "__index", function(self,key)
+            if not checkcaller() then
+                if tostring(key):find("Magnitude") or tostring(key):lower():find("magnitude") then
+                    warn("[EVENT] Magnitude")
+                    return math.random(1, 3)
+                    end
+                end
+            return hookmag(self,key)
+        end)
+        
+    end
+    
+    local disc = nil
+    local function abc()
+        local tbl = {}
+    if disc then disc:Disconnect() end
+    disc = player.Character.ChildAdded:Connect(function(obj)
+        if obj:IsA("Tool") and obj:FindFirstChild("Handle") then
+            if not table.find(tbl, "a") then
+                table.insert(tbl, "a")
+            DisableFunc(obj.Handle:GetPropertyChangedSignal("Position"))
+            DisableFunc(obj.Handle:GetPropertyChangedSignal("Position\000"))
+            DisableFunc(obj.Handle:GetPropertyChangedSignal("CFrame\000"))
+            DisableFunc(obj.Handle:GetPropertyChangedSignal("CFrame"))
+            DisableFunc(obj.Handle.Changed)
+            warn("[EVENT] Handle Spoofed")
+            end
+        end
+    end)
+end
+    
+    player.Character:WaitForChild("Humanoid").Died:Connect(function()
+        pcall(function()
+        repeat task.wait() until game:GetService("Players").LocalPlayer.Character:FindFirstChild("Humanoid").Health ~= 0
+        task.wait(1)
+        table.clear(tbl)
+        abc()
+        
+        if disc then
+            disc:Disconnect()
+        end
+    end)
+    end)
+    
+    
+    spawn(function()
+        while task.wait() do
+            pcall(function()
+            for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+                if v ~= player and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 and v:FindFirstChildOfClass("ForceField") == nil then
+                    if player.Character and player.Character:FindFirstChildOfClass("Tool"):FindFirstChildOfClass("Part") or player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle") then
+                        local mag = (player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle").Position - v.Character.HumanoidRootPart.Position).Magnitude
+                        if mag <= Method["SwordTp.Distance"] then
+                            if Method["SwordTp.Trail"] == true then
+                                HandleVis(player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle"))
+                            end
+                            if player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle").Massless == false then
+                                player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle").Massless = true
+                            end
+                            
+                            player.Character:FindFirstChildOfClass("Tool"):FindFirstChild("Handle").Position = v.Character.HumanoidRootPart.Position
+                            
+                            
+                        end
+                    end
+                end
+            end
+            end)
+            end
+    end)
+    
+    SendEvent("MonkeyWare V2", "Initialized Handle TP", 2, "http://www.roblox.com/asset/?id=141687960")
+end
+--< Resize >--
+
+if Method["Resize"] == true then
+    SendEvent("MonkeyWare V2", "Resize Activation", 2, "http://www.roblox.com/asset/?id=141687960")
+    
+
+
+    
+    --hooks
+    local hook
+    hook = hookmetamethod(game, "__namecall", function(...)
+        if getnamecallmethod() == "ASDAASDASDAS" then
+            return wait(9e9)
+        end
+        return hook(...)
+    end)
+    local TouchingHook
+    TouchingHook = hookmetamethod(game, "__namecall", function(...)
+        if getnamecallmethod() == "GetTouchingParts" then
+            return
+        end
+        return TouchingHook(...)
+    end)
+    
+    local hook;
+    hook = hookfunc(getrenv().wait, newcclosure(function(...)
+        local args = {...}
+        if args[1] == 2 and getcallingscript().Parent == nil then
+            warn("[Event]", "Touch trigger hooked.")
+            return coroutine.yield()
+        end
+        return hook(...)
+    end))
+    
+
+    
+    --main
+
+    local togglebind = "q"
+    local transparencybind = "e"
+    local Size = 5
+    local spam = 0
+
+    local Players = game:GetService("Players")
+    local plr = Players.LocalPlayer
+    local mouse = plr:GetMouse()
+
+    local isActive = false
+    local default_handlesize = Vector3.new(1, 0.8, 4)
+    local circlecolor = Color3.fromRGB(0,0,0)
+    local selectionboxname = "Faggots Revenge"
+
+    local function getHandle(toolName)
+        return plr.Backpack:FindFirstChild("Tool"):FindFirstChild("Handle") or
+        plr.Character:FindFirstChild(toolName):FindFirstChild("Handle")
+    end
+
+local function getHandles()
+    local args = {}
+    local handle = nil
+
+    local function get(tab)
+        for _, v in pairs(tab) do
+            if v:IsA("Tool") then
+                handle = v:FindFirstChild("Handle")
+                if handle ~= nil then
+                    args[#args+1] = handle
+                end
+            end
+        end
+    end
+
+
+
+
+    get(plr.Backpack:GetChildren())
+    get(plr.Character:GetChildren())
+
+    return args
+end
+
+    local function reach()
+        for _, v in pairs (gethandles()) do
+
+            if not isActive then
+                local circlereach =  Instance.new("SelectionBox")
+                circlereach.Transparency = 1
+                circlereach.SurfaceTransparency = 0.2
+                circlereach.Adornee = v
+                circlereach.Name = selectionboxname
+                circlereach.Parent = v
+                v.Massless = true
+                v.CanCollide = false
+                repeat
+                    v.Size = Vector3.new(Size, Size, Size)
+                    wait(0.01)
+                    v.Size = Vector3.new(spam, spam, spam)
+                    print("runned")
+                until false
+
+            else
+            for _, k in pairs (v:GetChildren()) do 
+                if k.Name == selectionboxname then
+                    k:Destroy()
+                end
+
+            end
+            v.Size = default_handlesize
+        end
+    end
+end
+    
+
+local function hide()
+    for _, v in pairs(getHandles()) do
+        if v:FindFirstChild(selectionboxname) then
+            v[selectionboxname].Visible = not v[selectionboxname].Visible
+
+        end
+    end
+end
+
+mouse.KeyDown:Connect(function(piss)
+    if piss == togglebind then
+        reach()
+        isActive = not isActive
+    elseif piss == transparencybind then
+        hide()
+
+    end 
+end)
+
+
+HigherBind = "f"
+lowerbind = "g"
+
+local Mouse = game.Players.LocalPlayer:GetMouse()
+Mouse.KeyDown:Connect(function(key)
+    if key == Higherbind then 
+        Size = Size + 1
+        game.StarterGui:Setcore("SendNotification", {
+            Title = "Reach",
+            Text = "Reach set to " ..Size,
+            Icon ="",
+            Duration = 1 })
+        end
+    end)
+
+local Mouse = game.Players.LocalPlayer:GetMouse()
+Mouse.KeyDown:Connect(function(key)
+    if key == lowerbind then 
+        Size = Size - 3
+        game.StarterGui:Setcore("SendNotification", {
+            Title = "Reach",
+            Text = "Lowered reach to " ..Size,
+            Icon ="",
+            Duration = 1 })
+        end
+    end)
+
+
+
+    SendEvent("MonkeyWare V2", "Resize Activation complete", 2, "http://www.roblox.com/asset/?id=141687960")
+end
+
+
+
+
+
+-- < HBE MAIN FUNC > --
+local Default_Sizes = {
+    ["HumanoidRootPart"] = Vector3.new(2, 2, 1),
+}
+
+local AlreadyDisabled = {}
+local Disabled_2 = {}
+if Method["HBE"] == true then
+    SendEvent("MonkeyWare V2", "HBE Set-up", 2, "http://www.roblox.com/asset/?id=141687960")
+    
+    -- The hook below is broken and breaks UBLUBBLE(tested)
+    --[[
+    local hookSize; hookSize = hookmetamethod(game, "__index", function(self,key)
+        if not checkcaller() then
+            if tostring(self) == "HumanoidRootPart" and tostring(key) == "Size" then
+                warn("[EVENT], Hooked HRP S")
+                return Vector3.new(2, 2, 1) 
+               end
+            end
+        return hookSize(self,key)
+    end)--]]
+    
+    local hookCadd; hookCadd = hookmetamethod(game, "__index", function(self,key)
+        if not checkcaller() then
+            if tostring(key):find("CharacterAdded") or tostring(key):find("characteradded") then
+                warn("[EVENT] cAdded")
+                return
+                end
+            end
+        return hookCadd(self,key)
+    end)
+
+    local hookCSignal; hookCSignal = hookmetamethod(game, "__namecall", function(...)
+        if not checkcaller() then
+            local args = {...}
+            local getname = getnamecallmethod()
+            if tostring(getname):lower():find("getpropertychangedsignal") and args[1] == "Size" or args[2] == "Size" or args[3] == "Size" then
+                warn("[EVENT], propSignal, S2")
+                if args[1] == "Size" then
+                    args[1] = "Name"
+                    return
+                elseif args[2] == "Size" then
+                    args[2] = "Name"
+                    return
+                elseif args[3] == "Size" then
+                    args[3] = "Name"
+                    return
+                end
+            end
+        end
+        return hookCSignal(...)
+    end)
+
+    task.wait(2)
+    spawn(function()
+        while task.wait() do
+            pcall(function()
+        for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+            if v ~= player and v.Character and v.Character:FindFirstChildOfClass("Humanoid") and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") then 
+                if v.Character.HumanoidRootPart then
+                   local hrp = v.Character.HumanoidRootPart
+                   if not table.find(AlreadyDisabled, v) then
+                    table.insert(AlreadyDisabled, v)
+
+                    HookHBEIndex(hrp)
+                    DisableFunc(hrp:GetPropertyChangedSignal("Size"))
+                    DisableFunc(hrp:GetPropertyChangedSignal("Size\000"))
+                    --<
+                    local C1 = nil
+                    C1 = v.Character:WaitForChild("Humanoid").Died:Connect(function()
+                        if table.find(AlreadyDisabled, v) then
+                            pcall(function()
+                                table.remove(AlreadyDisabled, table.find(AlreadyDisabled, v))
+
+                                task.wait(4)
+                                C1:Disconnect()
+                            end)
+                        end
+                    end)
+
+                        end
+                   end
+                end
+            end
+        end)
+        for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+            if v ~= player and v.Character and v.Character:FindFirstChildOfClass("Humanoid") and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") then 
+                if v.Character.HumanoidRootPart then
+                   local hrp = v.Character.HumanoidRootPart
+
+                if not table.find(AlreadyDisabled, v) then
+                    table.insert(AlreadyDisabled, v)
+                    HookHBEIndex(hrp)
+                    DisableFunc(hrp:GetPropertyChangedSignal("Size"))
+                    DisableFunc(hrp:GetPropertyChangedSignal("Size\000"))
+
+                    for i,v in pairs(v.character:GetChildren()) do
+                        if v:IsA("Part") then
+                            DisableFunc(v:GetPropertyChangedSignal("Size"))
+                            DisableFunc(v:GetPropertyChangedSignal("Size\000"))
+                        end
+                    end
+                end
+
+                    hrp.Size = Method["HBE.Size"]
+                    hrp.Transparency = 0.7
+                    hrp.BrickColor = BrickColor.new("Really blue")
+                    hrp.Material = "Neon"
+                    hrp.CanCollide = false
+                end
+            end
+        end
+        end
+    end)
+    
+    SendEvent("MonkeyWare V2", "HBE Finished", 2, "http://www.roblox.com/asset/?id=141687960")
+end
+
+UIS.InputBegan:Connect(function(inp, chat)
+    if chat then return end
+    
+    if inp.KeyCode == KeyInputs["Reach.Up"] then
+        if Method["CBring"] == true then
+            Method["CBring.Distance"] = Method["CBring.Distance"] + 1
+            SendEvent("MonkeyWare V2", "CBring Distance Up [" .. tostring(Method["CBring.Distance"]) .. "]", 2, "http://www.roblox.com/asset/?id=141687960")
+        end
+    elseif inp.KeyCode == KeyInputs["Reach.Down"] then
+        if Method["CBring"] == true then
+            Method["CBring.Distance"] = Method["CBring.Distance"] - 1
+            SendEvent("MonkeyWare V2", "CBring Distance Down [" .. tostring(Method["CBring.Distance"]) .. "]", 2, "http://www.roblox.com/asset/?id=141687960")
+        end
+    end
+end)
+
+--< Hook CharacterAdded :trol: >--
+for i,v in pairs(game:GetService("Players"):GetPlayers()) do
+    if v ~= player then
+        local s = v.CharacterAdded:Connect(function(charac)
+            if table.find(Disabled_2, v) then table.remove(Disabled_2, table.find(Disabled_2, v)) end
+            if Method["HBE"] == true then
+                warn("[EVENT] PADDED 1")
+                local hrp = charac:WaitForChild("HumanoidRootPart")
+                --HookHBEIndex(hrp, "Size", Vector3.new(2, 2, 1))
+                if not table.find(Disabled_2, v) then
+                     table.insert(Disabled_2, v)
+                DisableFunc(hrp:GetPropertyChangedSignal("Size"))
+                DisableFunc(hrp:GetPropertyChangedSignal("Size\000"))
+                for i,v in pairs(charac:GetChildren()) do
+                    if v:IsA("Part") then
+                        DisableFunc(v:GetPropertyChangedSignal("Size"))
+                        DisableFunc(v:GetPropertyChangedSignal("Size\000"))
+                    end
+                end
+                end
+            end
+        end)
+    end
+end
+
+game:GetService("Players").PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(charac)
+        if table.find(Disabled_2, plr) then table.remove(Disabled_2, table.find(Disabled_2, plr)) end 
+        if Method["HBE"] == true then
+            warn("[EVENT] PADDED 2")
+             local hrp = charac:WaitForChild("HumanoidRootPart")
+            --HookHBEIndex(hrp, "Size", Vector3.new(2, 2, 1))
+            if not table.find(Disabled_2, plr) then
+                table.insert(Disabled_2, plr)
+            DisableFunc(hrp:GetPropertyChangedSignal("Size"))
+            DisableFunc(hrp:GetPropertyChangedSignal("Size\000"))
+            for i,v in pairs(charac:GetChildren()) do
+                if v:IsA("Part") then
+                    DisableFunc(v:GetPropertyChangedSignal("Size"))
+                    DisableFunc(v:GetPropertyChangedSignal("Size\000"))
+                end
+            end
+            end
+        end
+    end)
+end)
+
